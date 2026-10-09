@@ -87,10 +87,10 @@ function el(tag, attrs, ...kids){
     else if (k.startsWith("on")) e[k] = attrs[k];
     else e.setAttribute(k, attrs[k]);
   }
-  kids.flat().forEach(c => e.append(c));
+  kids.flat(Infinity).forEach(c => e.append(c));
   return e;
 }
-function show(...nodes){ app.replaceChildren(...nodes); window.scrollTo(0,0); }
+function show(...nodes){ app.replaceChildren(...nodes.flat(Infinity)); window.scrollTo(0,0); }
 function back(text, fn){ return el("button",{class:"back",onclick:fn}, text); }
 
 function home(){
