@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>English Practice</title>
+<style>
+:root{--bg:#eaf1ee;--ink:#14302d;--card:#fff;--line:#c3d3ce;--accent:#0e6a62;--warm:#f0a93a;--good:#1d7a42;--bad:#b3362b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.55 "Trebuchet MS",Verdana,sans-serif}
+main{max-width:640px;margin:0 auto;padding:28px 18px 60px}
+h1{font:700 2.1rem/1.15 Georgia,serif;margin:0 0 6px}
+h2{font:700 1.4rem/1.25 Georgia,serif;margin:0 0 14px}
+.lead{margin:0 0 24px;color:#3d5753}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--warm);outline-offset:2px}
+.levels{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.level{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:16px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.level strong{font:700 1.7rem Georgia,serif;color:var(--accent)}
+.level span{font-size:.9rem;color:#3d5753}
+.level:hover,.opt:hover,.menu:hover{border-color:var(--accent)}
+.back{background:none;border:0;color:var(--accent);padding:0 0 18px;font-size:.95rem;text-decoration:underline}
+.menu{display:block;width:100%;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px}
+.menu b{display:block}
+.menu small{color:#3d5753;font-size:.9rem}
+.card{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:22px}
+.count{font-size:.9rem;color:#3d5753;margin:0 0 10px}
+.prompt{font-size:1.35rem;margin:0 0 18px}
+.blank{display:inline-block;min-width:3.2em;border-bottom:3px solid var(--warm)}
+.opts{display:flex;flex-wrap:wrap;gap:10px}
+.opt{background:#f6faf8;border:2px solid var(--line);border-radius:8px;padding:10px 18px}
+.opt.good,.w.good{background:#dff1e5;border-color:var(--good);color:#0f4a27}
+.opt.bad,.w.bad{background:#f8e0dc;border-color:var(--bad);color:#7d1f17}
+.fb{margin:18px 0 0;padding:12px 14px;border-left:5px solid var(--accent);background:#f1f7f5}
+.go{margin-top:18px;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:11px 22px;font-weight:700}
+.alt{background:#fff;color:var(--accent);border:2px solid var(--accent);margin-right:10px}
+.words{display:flex;flex-wrap:wrap;gap:8px}
+.w{background:#f6faf8;border:2px solid var(--line);border-radius:8px;padding:6px 12px;font-size:1.2rem}
+.say{font-size:1.5rem;margin:0 0 18px}
+.row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:6px}
+.out{margin-top:16px;min-height:3em}
+.score{font:700 2.4rem Georgia,serif;color:var(--accent);margin:0 0 6px}
+@media(prefers-reduced-motion:no-preference){.card{animation:in .25s ease-out}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+const LEVELS = ["A1","A2","B1","B2","C1","C2"];
+const NAMES = {A1:"Beginner",A2:"Elementary",B1:"Intermediate",B2:"Upper intermediate",C1:"Advanced",C2:"Proficient"};
+const KINDS = {
+  choose:{title:"Choose the word",sub:"Fill the blank with the correct word."},
+  mistake:{title:"Find the mistake",sub:"Tap the word that is wrong."},
+  speak:{title:"Say it aloud",sub:"Listen, then say the sentence. We check your words."}
+};
+
+/* Exercise content. Add a new level by adding a key like A2 with the same three lists. */
+const DATA = {
+  A1:{
+    choose:[
+      {q:"She ___ to school every day.",o:["go","goes"],a:1,why:"With he, she and it, the verb takes -s: she goes."},
+      {q:"I ___ a student.",o:["am","is","are"],a:0,why:"Use am with I."},
+      {q:"There ___ two apples on the table.",o:["is","are"],a:1,why:"Two apples is plural, so use are."},
+      {q:"___ you like coffee?",o:["Do","Does","Are"],a:0,why:"Questions with you use Do + verb."},
+      {q:"This is ___ apple.",o:["a","an"],a:1,why:"Use an before a vowel sound: an apple."}
+    ],
+    mistake:[
+      {s:"He go to work by bus.",bad:1,fix:"goes",why:"With he, the verb needs -s."},
+      {s:"She have two brothers.",bad:1,fix:"has",why:"With she, use has, not have."},
+      {s:"They is my friends.",bad:1,fix:"are",why:"With they, use are."},
+      {s:"I have a orange.",bad:3,fix:"an",why:"Use an before a vowel sound."}
+    ],
+    speak:[
+      {s:"My name is Anna."},
+      {s:"I like pizza and water."},
+      {s:"Where is the bus station?"},
+      {s:"She goes to school every day."}
+    ]
+  }
+};
+
+const app = document.getElementById("app");
+function el(tag, attrs, ...kids){
+  const e = document.createElement(tag);
+  for (const k in attrs){
+    if (k === "class") e.className = attrs[k];
+    else if (k.startsWith("on")) e[k] = attrs[k];
+    else e.setAttribute(k, attrs[k]);
+  }
+  kids.flat().forEach(c => e.append(c));
+  return e;
+}
+function show(...nodes){ app.replaceChildren(...nodes); window.scrollTo(0,0); }
+function back(text, fn){ return el("button",{class:"back",onclick:fn}, text); }
+
+function home(){
+  show(
+    el("h1",{},"English practice"),
+    el("p",{class:"lead"},"Pick your level. Practice grammar and pronunciation."),
+    el("div",{class:"levels"}, LEVELS.map(l =>
+      el("button",{class:"level",onclick:()=>menu(l)}, el("strong",{},l), el("span",{},NAMES[l]))))
+  );
+}
+
+function menu(l){
+  if (!DATA[l]){
+    show(back("Back to levels",home), el("h2",{},l+" "+NAMES[l]),
+      el("p",{},"Exercises for this level are coming soon."));
+    return;
+  }
+  show(back("Back to levels",home), el("h2",{},l+" "+NAMES[l]),
+    Object.keys(KINDS).map(k => el("button",{class:"menu",onclick:()=>run(l,k)},
+      el("b",{},KINDS[k].title), el("small",{},KINDS[k].sub))));
+}
+
+function run(l, kind){
+  const items = DATA[l][kind];
+  let i = 0, score = 0;
+  const exit = () => menu(l);
+
+  function wrap(...kids){
+    show(back("Back to "+l+" menu",exit),
+      el("div",{class:"card"}, el("p",{class:"count"},KINDS[kind].title+" · "+(i+1)+" of "+items.length), kids));
+  }
+  function nextBtn(){
+    return el("button",{class:"go",onclick:()=>{i++;step();}}, i+1 < items.length ? "Next question" : "See results");
+  }
+  function step(){
+    if (i >= items.length) return done();
+    ({choose,mistake,speak}[kind])(items[i]);
+  }
+  function done(){
+    const msg = kind === "speak" ? "clear sentences" : "correct";
+    show(back("Back to "+l+" menu",exit), el("div",{class:"card"},
+      el("p",{class:"score"}, score+" of "+items.length), el("p",{},msg.charAt(0).toUpperCase()+msg.slice(1)+"."),
+      el("button",{class:"go alt",onclick:()=>run(l,kind)},"Try again"),
+      el("button",{class:"go",onclick:exit},"Choose another activity")));
+  }
+
+  function choose(it){
+    const parts = it.q.split("___");
+    const fb = el("div");
+    const btns = it.o.map((o,n) => el("button",{class:"opt",onclick:()=>{
+      btns.forEach((b,m)=>{b.disabled=true; if(m===it.a)b.classList.add("good");});
+      if (n===it.a){ score++; fb.append(el("p",{class:"fb"},"Correct. "+it.why)); }
+      else { btns[n].classList.add("bad"); fb.append(el("p",{class:"fb"},"Not quite. The answer is “"+it.o[it.a]+"”. "+it.why)); }
+      fb.append(nextBtn());
+    }},o));
+    wrap(el("p",{class:"prompt"},parts[0],el("span",{class:"blank"}),parts[1]), el("div",{class:"opts"},btns), fb);
+  }
+
+  function mistake(it){
+    const words = it.s.split(" ");
+    const fb = el("div");
+    const btns = words.map((w,n) => el("button",{class:"w",onclick:()=>{
+      btns.forEach(b=>b.disabled=true);
+      btns[it.bad].classList.add("good");
+      if (n===it.bad){ score++; fb.append(el("p",{class:"fb"},"Correct. “"+words[it.bad]+"” should be “"+it.fix+"”. "+it.why)); }
+      else { btns[n].classList.add("bad"); fb.append(el("p",{class:"fb"},"Not quite. The mistake is “"+words[it.bad]+"”. It should be “"+it.fix+"”. "+it.why)); }
+      fb.append(nextBtn());
+    }},w));
+    wrap(el("p",{class:"prompt"},"Which word is wrong?"), el("div",{class:"words"},btns), fb);
+  }
+
+  function speak(it){
+    const out = el("div",{class:"out"});
+    const row = el("div",{class:"row"},
+      el("button",{class:"go alt",onclick:()=>listen(it.s)},"Listen"),
+      el("button",{class:"go",onclick:()=>record(it,out,ok=>{ if(ok&&!it._ok){it._ok=true;score++;} })},"Speak"));
+    row.querySelectorAll("button").forEach(b=>b.style.marginTop="0");
+    wrap(el("p",{class:"say"},it.s), row, out, nextBtn());
+  }
+  step();
+}
+
+function listen(text){
+  if (!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-US"; u.rate = 0.85;
+  speechSynthesis.speak(u);
+}
+function words(s){ return s.toLowerCase().replace(/[^a-z' ]/g,"").split(/\s+/).filter(Boolean); }
+
+function record(it, out, report){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ out.textContent = "This browser can't listen to speech. Try Chrome or Safari."; return; }
+  const r = new SR();
+  r.lang = "en-US"; r.interimResults = false; r.maxAlternatives = 1;
+  out.textContent = "Listening. Say the sentence now.";
+  r.onresult = e => {
+    const heard = e.results[0][0].transcript;
+    const pool = words(heard), target = words(it.s);
+    let hit = 0;
+    const marks = target.map(w => {
+      const k = pool.indexOf(w);
+      if (k > -1){ pool.splice(k,1); hit++; return el("span",{class:"w good"},w); }
+      return el("span",{class:"w bad"},w);
+    });
+    const pct = Math.round(hit/target.length*100);
+    const ok = pct >= 80;
+    report(ok);
+    out.replaceChildren(
+      el("p",{},"We heard: “"+heard+"”"),
+      el("div",{class:"words"},marks),
+      el("p",{class:"fb"}, ok ? "Clear. "+pct+"% of the words were recognized."
+        : pct+"% recognized. Words in red were not heard clearly. Tap Listen, then try again."));
+  };
+  r.onerror = () => { out.textContent = "We couldn't hear you. Allow the microphone in your browser, then tap Speak again."; };
+  r.start();
+}
+
+home();
+</script>
+</body>
+</html>
